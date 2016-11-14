@@ -9,6 +9,13 @@ use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
 
+use app\models\MyForm;
+use app\models\Comments;
+
+use yii\helpers\Html;
+use yii\web\UploadedFile;
+use yii\data\Pagination;
+
 class SiteController extends Controller
 {
     /**
@@ -121,5 +128,71 @@ class SiteController extends Controller
     public function actionAbout()
     {
         return $this->render('about');
+    }
+
+    /**
+     * Displays Hello page.
+     *
+     * @param $message
+     * @return string
+     */
+    public function actionHello($message = 'Hello world')
+    {
+        return $this->render('hello', ['message' => $message]);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function actionForm()
+    {
+        $form = new MyForm();
+
+        if ($form->load(Yii::$app->request->post()) && $form->validate()) {
+            $name = Html::encode($form->name);
+            $email = Html::encode($form->email);
+
+            $form->file = UploadedFile::getInstance($form, 'file');
+
+            $form->file->saveAs('photo/' . $form->file->baseName . "." . $form->file->extension);
+        } else {
+            $name = '';
+            $email = '';
+        }
+        return $this->render('form', ['form' => $form, 'name' => $name, 'email' => $email]);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function actionComments()
+    {
+        $comments = Comments::find();//->all();
+
+        $pagination = new Pagination([
+            'defaultPageSize' => 3,
+            'totalCount' => $comments->count()
+        ]);
+
+        $comments = $comments->offset($pagination->offset)
+            ->limit($pagination->limit)
+            ->all();
+
+        return $this->render(
+            'comments', [
+            'comments' => $comments,
+            'pagination' => $pagination,
+            'name' => Yii::$app->session->get('name')
+        ]);
+    }
+
+    public function actionUser()
+    {
+        $name = Yii::$app->request->get('name', 'guest');
+
+        $session = Yii::$app->session;
+        $session->set('name', $name);
+        return $this->render('user',
+            ['name' => $name]);
     }
 }
